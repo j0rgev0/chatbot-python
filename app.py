@@ -18,31 +18,31 @@ def predict():
     try:
         data = request.json
 
-        # Preguntas para las cuales recibimos respuestas "Sí" o "No"
+        # questions
         boolean_fields = [
             'mainroad', 'guestroom', 'basement', 'hotwaterheating', 
             'airconditioning', 'prefarea', 'furnished'
         ]
 
-        # Convertir "Sí" y "No" en 1 y 0
+        # change "Y" y "N" in 1 y 0
         for field in boolean_fields:
             if field in data:
-                if isinstance(data[field], str):  # Solo aplicar .lower() si es una cadena
-                    data[field] = 1 if data[field].lower() in ["sí", "si"] else 0
-                elif isinstance(data[field], int):  # Si ya es un número, asignar 1 o 0 según el valor
+                if isinstance(data[field], str):  
+                    data[field] = 1 if data[field].lower() in ["y", "y"] else 0
+                elif isinstance(data[field], int):  
                     data[field] = 1 if data[field] == 1 else 0
 
-        # Crear DataFrame con las respuestas
+        # responces
         input_data = pd.DataFrame([[data[field] for field in [
             'area', 'bedrooms', 'bathrooms', 'stories', 'mainroad', 'guestroom', 
             'basement', 'hotwaterheating', 'airconditioning', 'parking', 'prefarea', 'furnished'
         ]]], columns=['area', 'bedrooms', 'bathrooms', 'stories', 'mainroad', 'guestroom', 
                      'basement', 'hotwaterheating', 'airconditioning', 'parking', 'prefarea', 'furnished'])
 
-        # Realizar la predicción
+
         prediction = model.predict(input_data)[0]
 
-        # Devolver la predicción como un JSON
+        # Return predictions
         return jsonify({'predicted_price': prediction})
 
     except Exception as e:
