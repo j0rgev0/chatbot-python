@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Prediction Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes waveAnimation {
+            0% {
+                background-position: 0 0;
+            }
+            50% {
+                background-position: 100% 0;
+            }
+            100% {
+                background-position: 0 0;
+            }
+        }
+
+        .wave-background {
+            background: linear-gradient(90deg, #38bdf8, #10b981, #ec4899);
+            background-size: 200% 100%;
+            animation: waveAnimation 30s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: gray;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes blink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+
+        /* Scrollbar personalizado */
+        #chat-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-box::-webkit-scrollbar-track {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+        #chat-box::-webkit-scrollbar-thumb {
+            background: #4a90e2;
+            border-radius: 10px;
+        }
+        #chat-box::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
+        
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen wave-background">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-6 flex flex-col items-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 ">Price Prediction Chatbot</h1>
+        <div id="chat-box" class="w-full max-h-80 overflow-y-auto flex flex-col gap-3 p-3 bg-gray-200 rounded-lg shadow-inner"></div>
+        <div class="flex gap-2 mt-4 w-full" id="input-container">
+            <input id="user-input" type="text" placeholder="Type your response..." class="flex-1 p-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="send-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transform hover:scale-105 transition">Send</button>
+        </div>
+        <button id="restart-btn" class="hidden mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transform hover:scale-105 transition">Restart</button>
+    </div>
+
+    <script>
+        let chatBox = document.getElementById("chat-box");
+        let userInput = document.getElementById("user-input");
+        let sendBtn = document.getElementById("send-btn");
+        let restartBtn = document.getElementById("restart-btn");
+        let inputContainer = document.getElementById("input-container");
+
+        let userData = {}; 
+        let questions = [
+            "What is the area of the house (m2)?",
+            "How many bedrooms does it have?",
+            "How many bathrooms does it have?",
+            "How many floors does it have?",
+            "Is it on a main road? (Y/N)",
+            "Does it have a guest room? (Y/N)",
+            "Does it have a basement? (Y/N)",
+            "Does it have a water heater? (Y/N)",
+            "Does it have air conditioning? (Y/N)",
+            "How many parking spaces does it have?",
+            "Is it in a preferred area? (Y/N)",
+            "Is it furnished? (Y/N)"
+        ];
+        
+        let currentQuestionIndex = 0;
+
+        function askQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                let messageElement = document.createElement('div');
+                messageElement.classList.add('p-3', 'bg-gray-300', 'rounded-lg', 'self-start', 'max-w-xs', 'message');
+                messageElement.textContent = questions[currentQuestionIndex];
+                chatBox.appendChild(messageElement);
+                scrollToBottom();
+                typeMessage(messageElement);
+                userInput.value = "";
+            } else {
+                fetchPrediction();
+            }
+        }
+
+        sendBtn.onclick = function() {
+            let answer = userInput.value.trim();
+            if (answer) {
+                userData[questions[currentQuestionIndex]] = answer;
+                let userMessage = document.createElement('div');
+                userMessage.classList.add('p-3', 'bg-blue-600', 'text-white', 'rounded-lg', 'self-end', 'max-w-xs', 'message');
+                userMessage.textContent = answer;
+                chatBox.appendChild(userMessage);
+                typeMessage(userMessage);
+                currentQuestionIndex++;
+                askQuestion();
+            }
+        };
+
+        async function fetchPrediction() {
+            let formData = {
+                area: Number(userData[questions[0]]),
+                bedrooms: Number(userData[questions[1]]),
+                bathrooms: Number(userData[questions[2]]),
+                stories: Number(userData[questions[3]]),
+                mainroad: userData[questions[4]].toLowerCase() === "y" ? 1 : 0,
+                guestroom: userData[questions[5]].toLowerCase() === "y" ? 1 : 0,
+                basement: userData[questions[6]].toLowerCase() === "y" ? 1 : 0,
+                hotwaterheating: userData[questions[7]].toLowerCase() === "y" ? 1 : 0,
+                airconditioning: userData[questions[8]].toLowerCase() === "y" ? 1 : 0,
+                parking: Number(userData[questions[9]]),
+                prefarea: userData[questions[10]].toLowerCase() === "y" ? 1 : 0,
+                furnished: userData[questions[11]].toLowerCase() === "y" ? 1 : 0
+            };
+
+            let response = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            let result = await response.json();
+            let chatbotMessage = document.createElement('div');
+            chatbotMessage.classList.add('p-3', 'bg-gray-300', 'rounded-lg', 'self-start', 'max-w-xs', 'message');
+            chatbotMessage.textContent = result.predicted_price ? `The predicted price is: ${result.predicted_price}` : "Error in prediction.";
+            chatBox.appendChild(chatbotMessage);
+            scrollToBottom();
+
+            typeMessage(chatbotMessage);
+
+            inputContainer.classList.add("hidden");
+            restartBtn.classList.remove("hidden");
+        }
+
+        function typeMessage(messageElement) {
+            let messageText = messageElement.textContent;
+            messageElement.textContent = '';
+            let index = 0;
+
+            let typingInterval = setInterval(function() {
+                messageElement.textContent += messageText.charAt(index);
+                index++;
+                if (index === messageText.length) {
+                    clearInterval(typingInterval);
+                }
+            }, 50);
+        }
+
+        restartBtn.onclick = function() {
+            chatBox.innerHTML = "";
+            userData = {};
+            currentQuestionIndex = 0;
+            inputContainer.classList.remove("hidden");
+            restartBtn.classList.add("hidden");
+            askQuestion();
+        };
+
+        userInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendBtn.click();
+            }
+        });
+
+
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        askQuestion();
+    </script>
+</body>
+</html>
